@@ -9,7 +9,7 @@ import cv
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
 import numpy as np
-import tqdm
+from tqdm import tqdm
 
 # Reading bag filename from command line or roslaunch parameter.
 import os
@@ -34,24 +34,22 @@ class ImageCreator():
         # Use a CvBridge to convert ROS images to OpenCV images so they can be saved.
         self.bridge = CvBridge()
 
+        steeringCSV = open(os.path.join(save_dir, 'steeringinfo.csv'), 'w+')
         # Open bag file.
         print('Loading the bag file')
         with rosbag.Bag(filename, 'r') as bag:
-            progressBar = tqdm(total=bag.get_message_count('/center_camera/image_color'))
+            progressBar = tqdm(total=bag.get_message_count('/vehicle/steering_report'))
             print('Loaded the bag file')
             for topic, msg, t in bag.read_messages():
-                if topic == "/center_camera/image_color":
+                if topic == "/vehicle/steering_report":
                     try:
-                        #cv_image = self.bridge.imgmsg_to_cv(msg, "bgr8")
-                        image_data = np.squeeze(np.array(self.bridge.imgmsg_to_cv2(msg, "bgr8")))
-                        cv_image = cv.fromarray(image_data)
+                        steering_data = str(msg.steering_wheel_angle)
+                        steeringCSV.write(steering_data + '\n')
+                        progressBar.update(1)
                     except CvBridgeError, e:
                         print e
-                    timestr = "%.6f" % msg.header.stamp.to_sec()
-                    image_name = str(save_dir)+"/center_"+timestr+".png"
-                    cv.SaveImage(image_name, cv_image)
-                    progressBar.update(1)
             progressBar.close()
+        steeringCSV.close()
 
 # Main function.    
 if __name__ == '__main__':
