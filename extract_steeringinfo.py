@@ -5,7 +5,6 @@ PKG = 'my_package'
 import roslib; #roslib.load_manifest(PKG)
 import rosbag
 import rospy
-import cv
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
 import numpy as np
@@ -43,7 +42,9 @@ class ImageCreator():
             for topic, msg, t in bag.read_messages():
                 if topic == "/vehicle/steering_report":
                     try:
+                        timestr = "%.6f" % msg.header.stamp.to_sec()
                         steering_data = str(msg.steering_wheel_angle)
+                        steeringCSV.write(str(timestr) + ',')
                         steeringCSV.write(steering_data + '\n')
                         progressBar.update(1)
                     except CvBridgeError, e:
