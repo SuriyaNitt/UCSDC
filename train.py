@@ -47,14 +47,21 @@ def load_gt():
     groundTruthFile = open('./groundTruth.csv')
     line = groundTruthFile.readline()
     groundTruth = []
-    groundTruth.append(float(line.split(',')[1]))
     while line != '':
+        arr = line.split(',')
+        if len(arr) == 2:
+            groundTruth.append(float(arr[1]))
         line = groundTruthFile.readline()
-        groundTruth.append(float(line.split(',')[1]))
     return groundTruth
 
 def train():
-    masterX = load_imgs(224, 224)
+    #masterX = load_imgs(224, 224) # Use this only if the input data is not cached
+    #numCaches = 31
+    #caches = range(31)
+    #caches += 1
+    #random.shuffle(caches)
+    #masterXCaches = caches[:15]
+    #masterX = loadDataFromCaches(masterXCaches)
     masterY = load_gt()
     print 'Loaded data'
 
