@@ -4,6 +4,7 @@ import os
 import numpy as np
 from tqdm import tqdm
 import hickle
+import random
 
 def cache_data(data, path):
     if os.path.isdir(os.path.dirname(path)):
@@ -54,15 +55,38 @@ def load_gt():
         line = groundTruthFile.readline()
     return groundTruth
 
+def loadDataFromCaches(masterXCaches, rows, cols):
+    progressBar = tqdm(total=len(masterXCaches))
+    cachePath = './cache'
+    imgs = np.ndarray((0, rows, cols, 3), dtype='float32')
+    for i in range(len(masterXCaches)):
+        cacheFile = os.path.join(cachePath, str(masterXCaches[i]) + '.dat')
+        imgs = np.append(imgs, restore_data(cacheFile), axis=0)
+        progressBar.update(1)
+    print imgs.shape
+    progressBar.close()
+    return imgs
+
+def model():
+    
+
 def train():
     #masterX = load_imgs(224, 224) # Use this only if the input data is not cached
-    #numCaches = 31
-    #caches = range(31)
-    #caches += 1
-    #random.shuffle(caches)
-    #masterXCaches = caches[:15]
-    #masterX = loadDataFromCaches(masterXCaches)
+    numCaches = 31
+    caches = range(31)
+    caches = [c+1 for c in caches]
+    random.shuffle(caches)
+    masterXCaches = caches[:7]
+    masterX = loadDataFromCaches(masterXCaches, 224, 224)
     masterY = load_gt()
+    newY = []
+    for i in range(len(masterXCaches)):
+        pos = masterXCaches[i]
+        start = (pos-1) * 500
+        end = pos*500
+        partY = masterY[start:end]
+        newY.extend(partY)
+    print len(newY)
     print 'Loaded data'
 
 
