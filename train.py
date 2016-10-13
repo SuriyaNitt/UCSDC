@@ -71,9 +71,9 @@ def loadDataFromCaches(masterXCaches, rows, cols):
 def network(rows, cols):
     # Building Residual Network
     net = tflearn.input_data(shape=[None, rows, cols, 3])
-    net = tflearn.conv_2d(net, 64, 3, activation='relu', bias=False)
+    net = tflearn.conv_2d(net, 32, 3, activation='relu', bias=False)
     # Residual blocks
-    net = tflearn.residual_bottleneck(net, 3, 16, 64)
+    net = tflearn.residual_bottleneck(net, 3, 16, 32)
     net = tflearn.residual_bottleneck(net, 1, 32, 128, downsample=True)
     net = tflearn.residual_bottleneck(net, 2, 32, 128)
     net = tflearn.residual_bottleneck(net, 1, 64, 256, downsample=True)
@@ -96,7 +96,7 @@ def train():
     caches = range(31)
     caches = [c+1 for c in caches]
     random.shuffle(caches)
-    masterXCaches = caches[:7]
+    masterXCaches = caches[:5]
     masterX = loadDataFromCaches(masterXCaches, rows, cols)
     masterY = load_gt()
     newY = []
@@ -114,6 +114,8 @@ def train():
     randomState = 51
     testSize = 0.1 * len(masterXCaches)
     trainX, testX, trainY, testY = train_test_split(masterX, newY, test_size=testSize, random_state=randomState)
+    trainY = trainY.reshape((trainY.shape[0], 1))
+    testY = testY.reshape((testY.shape[0], 1))
     print trainX.shape
     print trainY.shape
     print testX.shape
@@ -124,7 +126,7 @@ def train():
     model = tflearn.DNN(myNet, checkpoint_path='model_resnet',
                         max_checkpoints=10, tensorboard_verbose=3, tensorboard_dir='./tflearn_logs')
     model.fit(trainX, trainY, n_epoch=1, validation_set=(testX, testY),
-              show_metric=True, batch_size=32, run_id='resnet')
+              show_metric=True, batch_size=16, run_id='resnet')
 
 
 if __name__ == '__main__':
