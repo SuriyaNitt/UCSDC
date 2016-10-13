@@ -107,11 +107,13 @@ def train():
         partY = masterY[start:end]
         newY.extend(partY)
     print len(newY)
+    newY = np.array(newY)
+    print newY.shape
     print 'Loaded data'
 
     randomState = 51
     testSize = 0.1 * len(masterXCaches)
-    trainX, trainY, testX, testY = train_test_split(masterX, newY, test_size=testSize, random_state=randomState)
+    trainX, testX, trainY, testY = train_test_split(masterX, newY, test_size=testSize, random_state=randomState)
     print trainX.shape
     print trainY.shape
     print testX.shape
