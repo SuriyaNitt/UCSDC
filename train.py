@@ -124,9 +124,9 @@ def train():
 
     myNet = network(rows, cols)
     # Training
-    model = tflearn.DNN(myNet, checkpoint_path='model_resnet',
-                        max_checkpoints=10, tensorboard_verbose=3, tensorboard_dir='./tflearn_logs')
-    model.fit(trainX, trainY, n_epoch=1, validation_set=(testX, testY),
+    model = tflearn.DNN(myNet, checkpoint_path='./model_resnet',
+                        max_checkpoints=1000, tensorboard_verbose=3, tensorboard_dir='./tflearn_logs')
+    model.fit(trainX, trainY, n_epoch=1000, validation_set=(testX, testY),
               show_metric=True, batch_size=16, run_id='resnet')
 
 
