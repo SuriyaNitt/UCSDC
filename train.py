@@ -74,10 +74,10 @@ def network(rows, cols):
     net = tflearn.conv_2d(net, 32, 3, activation='relu', bias=False)
     # Residual blocks
     net = tflearn.residual_bottleneck(net, 3, 16, 32)
-    net = tflearn.residual_bottleneck(net, 1, 32, 128, downsample=True)
-    net = tflearn.residual_bottleneck(net, 2, 32, 128)
-    net = tflearn.residual_bottleneck(net, 1, 64, 256, downsample=True)
-    net = tflearn.residual_bottleneck(net, 2, 64, 256)
+    #net = tflearn.residual_bottleneck(net, 1, 32, 128, downsample=True)
+    #net = tflearn.residual_bottleneck(net, 2, 32, 128)
+    #net = tflearn.residual_bottleneck(net, 1, 64, 256, downsample=True)
+    #net = tflearn.residual_bottleneck(net, 2, 64, 256)
     net = tflearn.batch_normalization(net)
     net = tflearn.activation(net, 'relu')
     net = tflearn.global_avg_pool(net)
@@ -112,7 +112,8 @@ def train():
     print 'Loaded data'
 
     randomState = 51
-    testSize = 0.1 * len(masterXCaches)
+    testSize = 0.1
+    print testSize
     trainX, testX, trainY, testY = train_test_split(masterX, newY, test_size=testSize, random_state=randomState)
     trainY = trainY.reshape((trainY.shape[0], 1))
     testY = testY.reshape((testY.shape[0], 1))
