@@ -6,6 +6,7 @@ from tqdm import tqdm
 import hickle
 import random
 from sklearn.cross_validation import train_test_split
+import sys
 
 def cache_data(data, path):
     if os.path.isdir(os.path.dirname(path)):
@@ -93,7 +94,7 @@ def train():
     rows = 224
     cols = 224
     numCaches = 31
-    caches = range(31)
+    caches = range(numCaches)
     caches = [c+1 for c in caches]
     random.shuffle(caches)
     masterXCaches = caches[5:10]
@@ -130,6 +131,53 @@ def train():
               show_metric=True, batch_size=16, run_id='resnet')
     model.save('./model_resnet/model1')
 
+def evaluate(cacheN):
+    rows = 224
+    cols = 224
+    numCaches = 32
+    caches = range(numCaches)
+    caches = [c+1 for c in caches]
+    random.shuffle(caches)
+    masterXCaches = [cacheN]
+    masterX = loadDataFromCaches(masterXCaches, rows, cols)
+    masterY = load_gt()
+    newY = []
+    for i in range(len(masterXCaches)):
+        pos = masterXCaches[i]
+        start = (pos-1) * 500
+        end = pos*500
+        partY = masterY[start:end]
+        newY.extend(partY)
+    print len(newY)
+    newY = np.array(newY)
+    print newY.shape
+    print 'Loaded data'
+
+    newY = newY.reshape((newY.shape[0], 1))
+    
+    myNet = network(rows, cols)
+    model = tflearn.DNN(myNet)
+    model.load('./model_resnet/model1')
+    #print model.evaluate(masterX, newY, 16)
+
+    predictedY = []
+    for i in range(masterX.shape[0]/10):
+        predictY = model.predict(masterX[i*10 : (i+1)*10])
+        predictedY.extend(predictY)
+    predictedY = np.array(predictedY)
+    predictedY = predictedY.reshape((predictedY.shape[0], 1))
+    diffY = predictedY - newY
+    diffYSqr = diffY ** 2
+    elemSum = np.sum(diffYSqr, axis=0)
+    average = elemSum / diffY.shape[0]
+    rmsd = np.sqrt(average)
+    print rmsd
+
 
 if __name__ == '__main__':
-    train()
+    train_evaluate = sys.argv[1]
+    if train_evaluate == 0:    
+        train()
+    else:
+        cacheN = int(sys.argv[2])
+        evaluate(cacheN)
