@@ -80,10 +80,10 @@ def network(rows, cols):
     #net = tflearn.residual_bottleneck(net, 1, 64, 256, downsample=True)
     #net = tflearn.residual_bottleneck(net, 2, 64, 256)
     net = tflearn.batch_normalization(net)
-    net = tflearn.activation(net, 'relu')
+    net = tflearn.activation(net, 'prelu')
     net = tflearn.global_avg_pool(net)
     # Regression
-    net = tflearn.fully_connected(net, 1, activation='relu')
+    net = tflearn.fully_connected(net, 1, activation='prelu')
     net = tflearn.regression(net, optimizer='momentum',
                              loss='mean_square',
                              learning_rate=0.1)
@@ -94,10 +94,14 @@ def train():
     rows = 224
     cols = 224
     numCaches = 31
+    trainedData = [10, 15, 6, 27, 24]
     caches = range(numCaches)
     caches = [c+1 for c in caches]
     random.shuffle(caches)
+    for i in trainedData:
+        caches.remove(i)
     masterXCaches = caches[5:10]
+    print caches[5:10]
     masterX = loadDataFromCaches(masterXCaches, rows, cols)
     masterY = load_gt()
     newY = []
@@ -166,8 +170,25 @@ def evaluate(cacheN):
         predictedY.extend(predictY)
     predictedY = np.array(predictedY)
     predictedY = predictedY.reshape((predictedY.shape[0], 1))
-    diffY = predictedY - newY
+    #diffY = predictedY - newY
+    denomY = []
+    for i in range(newY.shape[0]):
+        if newY[i] == 0:
+            denomY.extend([1])
+        else:
+            denomY.extend(newY[i])
+    denomY = np.array(denomY)
+    denomY = denomY.reshape((newY.shape[0], 1))
+    diffY = (predictedY - newY) / denomY
     diffYSqr = diffY ** 2
+
+    if not os.path.isdir('./predictions'):
+        os.mkdir('./predictions')
+    predictionFile = open('./predictions/' + str(cacheN) + '.csv', 'w+')
+    for i in range(predictedY.shape[0]):
+        predictionFile.write(str(predictedY[i]) + ',' + str(newY[i]) + ',' + str(diffY[i]) + '\n')
+    predictionFile.close()
+
     elemSum = np.sum(diffYSqr, axis=0)
     average = elemSum / diffY.shape[0]
     rmsd = np.sqrt(average)
@@ -176,7 +197,7 @@ def evaluate(cacheN):
 
 if __name__ == '__main__':
     train_evaluate = sys.argv[1]
-    if train_evaluate == 0:    
+    if train_evaluate == '0':    
         train()
     else:
         cacheN = int(sys.argv[2])
