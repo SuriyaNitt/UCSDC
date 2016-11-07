@@ -8,6 +8,19 @@ import random
 from sklearn.cross_validation import train_test_split
 import sys
 import math
+import re
+
+def atoi(text):
+    return int(text) if text.isdigit() else text
+
+
+def natural_keys(text):
+    '''
+    alist.sort(key=natural_keys) sorts in human order
+    http://nedbatchelder.com/blog/200712/human_sorting.html
+    (See Toothy's implementation in the comments)
+    '''
+    return [ atoi(c) for c in re.split('(\d+)', text) ]
 
 def cache_data(data, path):
     if os.path.isdir(os.path.dirname(path)):
@@ -33,6 +46,7 @@ def load_imgs(rows, cols):
     count = 0
     imgsPath = './center_images'
     imgFiles = os.listdir(imgsPath)
+    imgFiles.sort(key=natural_keys)
     imgs = np.ndarray((0, rows, cols, 3), dtype='float32')
     for imgFile in imgFiles:
         img = cv2.imread(os.path.join(imgsPath, imgFile))
@@ -219,13 +233,39 @@ def display(cacheN):
         img = np.array(masterX[i], dtype='uint8')
         x2 = 112
         y2 = 224
-        m = 1.57 - float(newY[i])
-        x1 = (100.0 / math.sqrt(1 + m**2)) + float(x2)
-        y1 = m * float(x1) + float(y2) - m * float(x2)
-        if m < 0:
+        m = float(newY[i])
+        print m
+        if m > 1.57:
+            m = 1.57
+        elif m < -1.57:
+            m = -1.57
+        print m
+        angle = 0
+        angle_debug = 0
+        if m >= 0:
+            angle_debug = 1.57 - m
+            m = math.tan(angle_debug)
+            print m
+        else:
+            angle_debug = 1.57 + m
+            m = math.tan(angle_debug)
+
+        angle = (1.57 - float(newY[i])) * 180.0 / 3.14
+        x1 = (100.0 / math.sqrt(1 + m**2))
+        y1 = m * float(x1)
+        print('({}, {}) ({}, {}), m={}, angle={}, {}, rad={}'.format(x2, y2, x1, y1, m, angle, angle_debug, (1.57 - float(newY[i]))))
+        y1 = 224 - y1
+        if angle > 90:
             x1 = -1.0 * x1
-        print('({}, {}) ({}, {}), m={}'.format(x2, y2, x1, y1, m))
-        cv2.line(img, (int(x2), int(y2)), (int(x1), int(y1)), (255, 0, 0))
+        x1 = 112.0 * (1.0 + x1/224.0)
+        print('({}, {}) ({}, {}), m={}, angle={}'.format(x2, y2, x1, y1, m, angle))
+        print('\n')
+
+        if angle < 30 or angle > 150:
+            cv2.arrowedLine(img, (int(x2), int(y2)), (int(x1), int(y1)), (0, 0, 255), 5)
+        else:
+            cv2.arrowedLine(img, (int(x2), int(y2)), (int(x1), int(y1)), (255, 0, 0))
+        #cv2.line(img, (int(x2), int(y2)), (0,0), (255, 0, 0))
         cv2.imshow('Video', img)
         cv2.waitKey(30)
     cv2.destroyAllWindows()
