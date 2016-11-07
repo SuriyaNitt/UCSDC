@@ -72,6 +72,24 @@ def load_gt():
         line = groundTruthFile.readline()
     return groundTruth
 
+def load_prediction(cacheN):
+    try:
+        predictionFile = open('./predictions/' + str(cacheN) + '.csv')
+    except:
+        if cacheN == 31:
+            predictions = np.zeros((282, 1))
+        else:
+            predictions = np.zeros((500, 1))
+        return predictions
+
+    line = predictionFile.readline()
+    predictions = []
+    while line != '':
+        arr = line.split(',')
+        predictions.append(float(arr[0]))
+        line = predictionFile.readline()
+    return predictions
+
 def loadDataFromCaches(masterXCaches, rows, cols):
     progressBar = tqdm(total=len(masterXCaches))
     cachePath = './cache'
@@ -204,7 +222,7 @@ def evaluate(cacheN):
         os.mkdir('./predictions')
     predictionFile = open('./predictions/' + str(cacheN) + '.csv', 'w+')
     for i in range(predictedY.shape[0]):
-        predictionFile.write(str(predictedY[i]) + ',' + str(newY[i]) + ',' + str(diffY[i]) + '\n')
+        predictionFile.write(str(predictedY[i][0]) + ',' + str(newY[i]) + ',' + str(diffY[i]) + '\n')
     predictionFile.close()
 
     elemSum = np.sum(diffYSqr, axis=0)
@@ -229,42 +247,78 @@ def display(cacheN):
     print newY.shape
     print 'Loaded data'
 
+    predictionY = load_prediction(cacheN)
+    predictionY = np.array(predictionY)
+
     for i in range(masterX.shape[0]):
         img = np.array(masterX[i], dtype='uint8')
         x2 = 112
         y2 = 224
         m = float(newY[i])
-        print m
+        mPredicted = float(predictionY[i])
+
+        angle = 0
+        angle_debug = 0
+
+        #Part1
         if m > 1.57:
             m = 1.57
         elif m < -1.57:
             m = -1.57
-        print m
-        angle = 0
-        angle_debug = 0
+
+        #Part2
         if m >= 0:
             angle_debug = 1.57 - m
             m = math.tan(angle_debug)
-            print m
         else:
             angle_debug = 1.57 + m
             m = math.tan(angle_debug)
 
+        #Part3
         angle = (1.57 - float(newY[i])) * 180.0 / 3.14
         x1 = (100.0 / math.sqrt(1 + m**2))
-        y1 = m * float(x1)
-        print('({}, {}) ({}, {}), m={}, angle={}, {}, rad={}'.format(x2, y2, x1, y1, m, angle, angle_debug, (1.57 - float(newY[i]))))
-        y1 = 224 - y1
+        y1 = 224 - m * float(x1)
         if angle < 90:
             x1 = -1.0 * x1
         x1 = 112.0 * (1.0 + x1/224.0)
-        print('({}, {}) ({}, {}), m={}, angle={}'.format(x2, y2, x1, y1, m, angle))
-        print('\n')
 
+        #Part4
         if angle < 30 or angle > 150:
             cv2.arrowedLine(img, (int(x2), int(y2)), (int(x1), int(y1)), (0, 0, 255), 5)
         else:
             cv2.arrowedLine(img, (int(x2), int(y2)), (int(x1), int(y1)), (255, 0, 0), 2)
+
+        #----------------------------------------------------------------------------------------
+
+        anglePredicted = 0
+        angle_debug_predicted = 0
+
+        #Prediction part1
+        if mPredicted > 1.57:
+            mPredicted = 1.57
+        elif mPredicted < -1.57:
+            mPredicted = -1.57
+        #Prediction part2
+        if mPredicted >= 0:
+            angle_debug_predicted = 1.57 - mPredicted
+            mPredicted = math.tan(angle_debug_predicted)
+        else:
+            angle_debug = 1.57 + mPredicted
+            mPredicted = math.tan(angle_debug_predicted)
+
+        #Prediction part3
+        anglePredicted = (1.57 - float(predictionY[i])) * 180.0 / 3.14
+        x3 = (100.0 / math.sqrt(1 + mPredicted**2))
+        y3 = 224 - mPredicted * float(x3)
+        if anglePredicted < 90:
+            x3 = -1.0 * x3
+        x3 = 112.0 * (1.0 + x3/224.0)
+
+        #Prediction part4
+        if anglePredicted < 30 or anglePredicted > 150:
+            cv2.arrowedLine(img, (int(x2), int(y2)), (int(x3), int(y3)), (0, 255, 255), 5)
+        else:
+            cv2.arrowedLine(img, (int(x2), int(y2)), (int(x3), int(y3)), (0, 255, 0), 2)
 
         img = cv2.resize(img, (1280, 720))
         cv2.imshow('Video', img)
