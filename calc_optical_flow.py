@@ -6,6 +6,7 @@ from tqdm import tqdm
 
 def calc_opticalflow(cacheNum):
     X = loadDataFromCaches(cacheNum, 224, 224)
+    print X.shape
 
 # Params for ShiTomasi corner detection
     featureParams = dict( maxCorners = 100, \
