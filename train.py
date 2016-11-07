@@ -7,6 +7,7 @@ import hickle
 import random
 from sklearn.cross_validation import train_test_split
 import sys
+import math
 
 def cache_data(data, path):
     if os.path.isdir(os.path.dirname(path)):
@@ -135,7 +136,7 @@ def train():
     model = tflearn.DNN(myNet, checkpoint_path='./model_resnet',
                         max_checkpoints=10, tensorboard_verbose=3, tensorboard_dir='./tflearn_logs')
     model.fit(trainX, trainY, n_epoch=10, validation_set=(testX, testY),
-              show_metric=True, batch_size=4, run_id='resnet')
+              show_metric=True, batch_size=32, run_id='resnet')
     model.save('./model_resnet/model1')
 
 def evaluate(cacheN):
@@ -198,10 +199,44 @@ def evaluate(cacheN):
     print rmsd
 
 
+def display(cacheN):
+    masterX = loadDataFromCaches([cacheN], 224, 224)
+    masterY = load_gt()
+    newY = []
+    masterXCaches = [cacheN]
+    for i in range(len(masterXCaches)):
+        pos = masterXCaches[i]
+        start = (pos-1) * 500
+        end = pos*500
+        partY = masterY[start:end]
+        newY.extend(partY)
+    print len(newY)
+    newY = np.array(newY)
+    print newY.shape
+    print 'Loaded data'
+
+    for i in range(masterX.shape[0]):
+        img = np.array(masterX[i], dtype='uint8')
+        x2 = 112
+        y2 = 224
+        m = 1.57 - float(newY[i])
+        x1 = (100.0 / math.sqrt(1 + m**2)) + float(x2)
+        y1 = m * float(x1) + float(y2) - m * float(x2)
+        if m < 0:
+            x1 = -1.0 * x1
+        print('({}, {}) ({}, {}), m={}'.format(x2, y2, x1, y1, m))
+        cv2.line(img, (int(x2), int(y2)), (int(x1), int(y1)), (255, 0, 0))
+        cv2.imshow('Video', img)
+        cv2.waitKey(30)
+    cv2.destroyAllWindows()
+
 if __name__ == '__main__':
     train_evaluate = sys.argv[1]
     if train_evaluate == '0':    
         train()
-    else:
+    elif train_evaluate == '1':
         cacheN = int(sys.argv[2])
         evaluate(cacheN)
+    elif train_evaluate == '2':
+        cacheN = int(sys.argv[2])
+        display(cacheN)
