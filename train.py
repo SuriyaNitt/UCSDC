@@ -73,16 +73,19 @@ def network(rows, cols):
     # Building Residual Network
     net = tflearn.input_data(shape=[None, rows, cols, 3])
     net = tflearn.conv_2d(net, 32, 3, activation='relu', bias=False)
+    net = tflearn.max_pool_2d(net, 2)
     # Residual blocks
-    net = tflearn.residual_bottleneck(net, 3, 16, 32)
-    #net = tflearn.residual_bottleneck(net, 1, 32, 128, downsample=True)
-    #net = tflearn.residual_bottleneck(net, 2, 32, 128)
-    #net = tflearn.residual_bottleneck(net, 1, 64, 256, downsample=True)
-    #net = tflearn.residual_bottleneck(net, 2, 64, 256)
+    net = tflearn.residual_bottleneck(net, 2, 16, 64, downsample=True)
+    net = tflearn.residual_bottleneck(net, 2, 32, 128, downsample=True)
+    #net = tflearn.residual_bottleneck(net, 2, 64, 256, downsample=True)
+    #net = tflearn.residual_bottleneck(net, 2, 128, 512, downsample=True)
+    
     net = tflearn.batch_normalization(net)
     net = tflearn.activation(net, 'prelu')
     net = tflearn.global_avg_pool(net)
+    
     # Regression
+    net = tflearn.fully_connected(net, 512, activation='prelu')
     net = tflearn.fully_connected(net, 1, activation='prelu')
     net = tflearn.regression(net, optimizer='momentum',
                              loss='mean_square',
@@ -94,7 +97,7 @@ def train():
     rows = 224
     cols = 224
     numCaches = 31
-    trainedData = [10, 15, 6, 27, 24]
+    trainedData = []#[10, 15, 6, 27, 24]
     caches = range(numCaches)
     caches = [c+1 for c in caches]
     random.shuffle(caches)
@@ -132,7 +135,7 @@ def train():
     model = tflearn.DNN(myNet, checkpoint_path='./model_resnet',
                         max_checkpoints=10, tensorboard_verbose=3, tensorboard_dir='./tflearn_logs')
     model.fit(trainX, trainY, n_epoch=10, validation_set=(testX, testY),
-              show_metric=True, batch_size=16, run_id='resnet')
+              show_metric=True, batch_size=4, run_id='resnet')
     model.save('./model_resnet/model1')
 
 def evaluate(cacheN):
