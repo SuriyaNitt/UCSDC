@@ -255,7 +255,7 @@ def display(cacheN):
         y1 = m * float(x1)
         print('({}, {}) ({}, {}), m={}, angle={}, {}, rad={}'.format(x2, y2, x1, y1, m, angle, angle_debug, (1.57 - float(newY[i]))))
         y1 = 224 - y1
-        if angle > 90:
+        if angle < 90:
             x1 = -1.0 * x1
         x1 = 112.0 * (1.0 + x1/224.0)
         print('({}, {}) ({}, {}), m={}, angle={}'.format(x2, y2, x1, y1, m, angle))
@@ -264,8 +264,9 @@ def display(cacheN):
         if angle < 30 or angle > 150:
             cv2.arrowedLine(img, (int(x2), int(y2)), (int(x1), int(y1)), (0, 0, 255), 5)
         else:
-            cv2.arrowedLine(img, (int(x2), int(y2)), (int(x1), int(y1)), (255, 0, 0))
-        #cv2.line(img, (int(x2), int(y2)), (0,0), (255, 0, 0))
+            cv2.arrowedLine(img, (int(x2), int(y2)), (int(x1), int(y1)), (255, 0, 0), 2)
+
+        img = cv2.resize(img, (1280, 720))
         cv2.imshow('Video', img)
         cv2.waitKey(30)
     cv2.destroyAllWindows()
