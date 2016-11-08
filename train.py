@@ -130,7 +130,7 @@ def train():
     rows = 224
     cols = 224
     numCaches = 31
-    trainedData = []#[10, 15, 6, 27, 24]
+    trainedData = [26, 4, 9, 29, 31, 22, 12, 3, 10, 27]#[10, 15, 6, 27, 24]
     caches = range(numCaches)
     caches = [c+1 for c in caches]
     random.shuffle(caches)
@@ -167,6 +167,7 @@ def train():
     # Training
     model = tflearn.DNN(myNet, checkpoint_path='./model_resnet',
                         max_checkpoints=10, tensorboard_verbose=3, tensorboard_dir='./tflearn_logs')
+    model.load('./model_resnet/model1')
     model.fit(trainX, trainY, n_epoch=10, validation_set=(testX, testY),
               show_metric=True, batch_size=32, run_id='resnet')
     model.save('./model_resnet/model1')
