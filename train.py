@@ -42,7 +42,7 @@ def restore_data(path):
     return data
 
 def load_imgs(rows, cols):
-    progressBar = tqdm(total=15212)
+    progressBar = tqdm(total=70659)
     count = 0
     imgsPath = './center_images'
     imgFiles = os.listdir(imgsPath)
@@ -57,7 +57,7 @@ def load_imgs(rows, cols):
         if count % 500 == 0:
             cache_data(imgs, './cache/' + str(count/500) + '.dat')
             imgs = np.ndarray((0, rows, cols, 3), dtype='float32')
-    cache_data(imgs, './cache/' + str(31) + '.dat')
+    cache_data(imgs, './cache/' + str(142) + '.dat')
     progressBar.close()
     return imgs
 
@@ -131,6 +131,15 @@ def train():
     cols = 224
     numCaches = 31
     trainedData = [26, 4, 9, 29, 31, 22, 12, 3, 10, 27]#[10, 15, 6, 27, 24]
+    
+    # this is for dataset 1
+    #numCaches = 31
+    #trainedData = [26, 4, 9, 29, 31]#[10, 15, 6, 27, 24]
+    #trainedData.extend([10, 1, 3, 8, 28])
+    # this is for dataset 2
+    numCaches = 142
+    trainedData = [99, 126, 5, 116, 42]
+
     caches = range(numCaches)
     caches = [c+1 for c in caches]
     random.shuffle(caches)
@@ -289,6 +298,8 @@ def display(cacheN):
         else:
             cv2.arrowedLine(img, (int(x2), int(y2)), (int(x1), int(y1)), (255, 0, 0), 2)
 
+        cv2.putText(img, 'GroundTruth', (int(x1), int(y1)), cv2.FONT_HERSHEY_COMPLEX_SMALL, 0.5, (0, 0, 0), 1)
+
         #----------------------------------------------------------------------------------------
 
         anglePredicted = 0
@@ -317,9 +328,11 @@ def display(cacheN):
 
         #Prediction part4
         if anglePredicted < 30 or anglePredicted > 150:
-            cv2.arrowedLine(img, (int(x2), int(y2)), (int(x3), int(y3)), (0, 255, 255), 5)
+            cv2.arrowedLine(img, (int(x2), int(y2)), (int(x3), int(y3-50)), (0, 255, 255), 5)
         else:
-            cv2.arrowedLine(img, (int(x2), int(y2)), (int(x3), int(y3)), (0, 255, 0), 2)
+            cv2.arrowedLine(img, (int(x2), int(y2)), (int(x3), int(y3-50)), (0, 255, 0), 2)
+
+        cv2.putText(img, 'Prediction', (int(x3), int(y3-50)), cv2.FONT_HERSHEY_COMPLEX_SMALL, 0.5, (0, 0, 0), 1)
 
         img = cv2.resize(img, (1280, 720))
         cv2.imshow('Video', img)
