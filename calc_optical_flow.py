@@ -137,6 +137,10 @@ def calc_opticalflow(cacheNum, typeOfFlow):
         print hsv.shape
         pb = tqdm(total=500)
 
+        filenameSuffix = str(cacheNum) + '_' + str('0001')
+        filename = './opticalflow/opticalflow_' + filenameSuffix + '.png'
+        cv2.imwrite(filename, np.zeros((224, 224, 3)))
+
         while(frameNum<500):
             frame = X[frameNum]
             #fileName = "%04d" % (frameNum+1)
@@ -167,10 +171,16 @@ def calc_opticalflow(cacheNum, typeOfFlow):
             #hsv[...,2] = cv2.normalize(mag, None, 0, 2, cv2.NORM_MINMAX)
             #bgr = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
             bgr = draw_hsv(flow)
+            drawFlow = draw_flow(frameGray, flow)
+
+            formattedFrameNum = "%04d" % (frameNum+1)
+            filenameSuffix = str(cacheNum) + '_' + formattedFrameNum
+            filename = './opticalflow/opticalflow_' + filenameSuffix + '.png'
+            cv2.imwrite(filename, drawFlow)
 
             #cv2.imshow('Difference', frameGray - oldGray)
             #cv2.imshow('New flow drawing', draw_hsv(flow))
-            cv2.imshow('New flow drawing', draw_flow(frameGray, flow))
+            cv2.imshow('New flow drawing', drawFlow)
             k = cv2.waitKey(30) & 0xff
             if k == 27:
                 break
@@ -182,9 +192,9 @@ def calc_opticalflow(cacheNum, typeOfFlow):
             elif k == ord('s'):
                 if not os.path.isdir('./optical_flow'):
                     os.path.mkdir('./optical_flow')
-                filenameSuffix = str(cacheNum) + '_' + str(frameNum) + '_'
+                filenameSuffix = str(cacheNum) + '_' + str(frameNum+1) + '_'
                 stitched = np.append(frameGray, bgr, axis=0)
-                cv2.imwrite('opticalflow' + filenameSuffix + '.png', stitched)
+                cv2.imwrite('./opticalflow/stitched_' + filenameSuffix + '.png', stitched)
                 #cv2.imwrite('opticalfb.png',frame2)
                 #cv2.imwrite('opticalhsv.png',bgr)
 
