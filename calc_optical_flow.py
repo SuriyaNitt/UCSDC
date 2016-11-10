@@ -138,7 +138,9 @@ def calc_opticalflow(cacheNum, typeOfFlow):
         pb = tqdm(total=500)
 
         filenameSuffix = str(cacheNum) + '_' + str('0001')
-        filename = './opticalflow/opticalflow_' + filenameSuffix + '.png'
+        filename = './opticalflow/flow/opticalflow_' + filenameSuffix + '.png'
+        cv2.imwrite(filename, np.zeros((224, 224, 3)))
+        filename = './opticalflow/bgr/opticalflow_hsv_' + filenameSuffix + '.png'
         cv2.imwrite(filename, np.zeros((224, 224, 3)))
 
         while(frameNum<500):
@@ -175,8 +177,10 @@ def calc_opticalflow(cacheNum, typeOfFlow):
 
             formattedFrameNum = "%04d" % (frameNum+1)
             filenameSuffix = str(cacheNum) + '_' + formattedFrameNum
-            filename = './opticalflow/opticalflow_' + filenameSuffix + '.png'
+            filename = './opticalflow/flow/opticalflow_' + filenameSuffix + '.png'
             cv2.imwrite(filename, drawFlow)
+            filename = './opticalflow/bgr/opticalflow_hsv_' + filenameSuffix + '.png'
+            cv2.imwrite(filename, bgr)
 
             #cv2.imshow('Difference', frameGray - oldGray)
             #cv2.imshow('New flow drawing', draw_hsv(flow))
@@ -205,7 +209,7 @@ def calc_opticalflow(cacheNum, typeOfFlow):
         cv2.destroyAllWindows()
 
 if __name__ == '__main__':
-    cacheNum = sys.argv[1]
-    typeOfFlow = sys.argv[2] # 1 - sparse, 2 - dense
+    cacheNum = sys.argv[2]
+    typeOfFlow = sys.argv[1] # 1 - sparse, 2 - dense
     calc_opticalflow(cacheNum, typeOfFlow)
 

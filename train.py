@@ -9,6 +9,7 @@ from sklearn.cross_validation import train_test_split
 import sys
 import math
 import re
+import glob
 
 def atoi(text):
     return int(text) if text.isdigit() else text
@@ -102,6 +103,25 @@ def loadDataFromCaches(masterXCaches, rows, cols):
     progressBar.close()
     return imgs
 
+def loadOpticalFlowImgs(masterXCaches, rows, cols):
+    progressBar = tqdm(total=len(masterXCaches))
+    opticalFlowPath = './opticalflow/flow/'
+    imgs = np.ndarray((0, rows, cols, 3), dtype='float32')
+    for i in range(len(masterXCaches)):
+        imgFiles = glob.glob(opticalFlowPath + 'opticalflow_' + str(masterXCaches[i]) + '_*')
+        imgFiles.sort(key=natural_keys)
+        progressBar2 = tqdm(total=len(imgFiles))
+        for imgFile in imgFiles:
+            img = cv2.imread(imgFile)
+            imgs = np.append(imgs, [img], axis=0)
+            progressBar2.update()
+        progressBar2.close()
+        progressBar.update()
+    progressBar.close()
+
+    return imgs
+        
+
 def network(rows, cols):
     # Building Residual Network
     net = tflearn.input_data(shape=[None, rows, cols, 3])
@@ -123,14 +143,52 @@ def network(rows, cols):
     net = tflearn.regression(net, optimizer='momentum',
                              loss='mean_square',
                              learning_rate=0.1)
+    return net
+
+def double_network(rows, cols):
+    # Building Residual Network
+    net1 = tflearn.input_data(shape=[None, rows, cols, 3])
+    net1 = tflearn.conv_2d(net1, 32, 3, activation='relu', bias=False)
+    net1 = tflearn.max_pool_2d(net1, 2)
+    # Residual blocks
+    net1 = tflearn.residual_bottleneck(net1, 2, 16, 64, downsample=True)
+    net1 = tflearn.residual_bottleneck(net1, 2, 32, 128, downsample=True)
+    
+    net1 = tflearn.batch_normalization(net1)
+    net1 = tflearn.activation(net1, 'prelu')
+    net1 = tflearn.global_avg_pool(net1)
+
+
+    # Building Residual Network
+    net2 = tflearn.input_data(shape=[None, rows, cols, 3])
+    net2 = tflearn.conv_2d(net2, 32, 3, activation='relu', bias=False)
+    net2 = tflearn.max_pool_2d(net2, 2)
+    # Residual blocks
+    net2 = tflearn.residual_bottleneck(net2, 2, 16, 64, downsample=True)
+    net2 = tflearn.residual_bottleneck(net2, 2, 32, 128, downsample=True)
+    
+    net2 = tflearn.batch_normalization(net2)
+    net2 = tflearn.activation(net2, 'prelu')
+    net2 = tflearn.global_avg_pool(net2)
+
+    # Merge layers
+    net = tflearn.merge([net1, net2], mode='elemwise_mul')
+    
+    # Regression
+    net = tflearn.fully_connected(net, 512, activation='prelu')
+    net = tflearn.fully_connected(net, 1, activation='prelu')
+    net = tflearn.regression(net, optimizer='momentum',
+                             loss='mean_square',
+                             learning_rate=0.1)
     return net 
+
 
 def train():
     #masterX = load_imgs(224, 224) # Use this only if the input data is not cached
     rows = 224
     cols = 224
     numCaches = 31
-    trainedData = [26, 4, 9, 29, 31, 22, 12, 3, 10, 27]#[10, 15, 6, 27, 24]
+    trainedData = []
     
     # this is for dataset 1
     #numCaches = 31
@@ -138,16 +196,17 @@ def train():
     #trainedData.extend([10, 1, 3, 8, 28])
     # this is for dataset 2
     numCaches = 142
-    trainedData = [99, 126, 5, 116, 42]
+    trainedData = []
 
     caches = range(numCaches)
     caches = [c+1 for c in caches]
     random.shuffle(caches)
     for i in trainedData:
         caches.remove(i)
-    masterXCaches = caches[5:10]
-    print caches[5:10]
+    masterXCaches = caches[0:2]
+    print caches[0:2]
     masterX = loadDataFromCaches(masterXCaches, rows, cols)
+    masterOFX = loadOpticalFlowImgs(masterXCaches, rows, cols)
     masterY = load_gt()
     newY = []
     for i in range(len(masterXCaches)):
@@ -161,10 +220,28 @@ def train():
     print newY.shape
     print 'Loaded data'
 
+    print masterOFX.shape
+
     randomState = 51
     testSize = 0.1
     print testSize
-    trainX, testX, trainY, testY = train_test_split(masterX, newY, test_size=testSize, random_state=randomState)
+
+    referenceX = range(1000)
+    refTrainX, refTestX, trainY, testY = train_test_split(referenceX, newY, test_size=testSize, random_state=randomState)
+    trainX = np.ndarray((0, 224, 224, 3), dtype='float32')
+    optTrainX = np.ndarray((0, 224, 224, 3), dtype='float32')
+    testX = np.ndarray((0, 224, 224, 3), dtype='float32')
+    optTestX = np.ndarray((0, 224, 224, 3), dtype='float32')
+
+    for i in refTrainX:
+        trainX = np.append(trainX, masterX[i], axis=0)
+        optTrainX = np.append(optTrainX, masterOFX[i], axis=0)
+        #trainY = np.append(trainY, newY[i], axis=0)
+    for i in refTestX:
+        testX = np.append(testX, masterX[i], axis=0)
+        optTestX = np.append(optTestX, masterOFX[i], axis=0)
+        #testY = np.append(testY, newY[i], axis=0)
+
     trainY = trainY.reshape((trainY.shape[0], 1))
     testY = testY.reshape((testY.shape[0], 1))
     print trainX.shape
@@ -177,7 +254,7 @@ def train():
     model = tflearn.DNN(myNet, checkpoint_path='./model_resnet',
                         max_checkpoints=10, tensorboard_verbose=3, tensorboard_dir='./tflearn_logs')
     model.load('./model_resnet/model1')
-    model.fit(trainX, trainY, n_epoch=10, validation_set=(testX, testY),
+    model.fit([trainX, optTrainX], trainY, n_epoch=10, validation_set=([testX, optTestX], testY),
               show_metric=True, batch_size=32, run_id='resnet')
     model.save('./model_resnet/model1')
 
