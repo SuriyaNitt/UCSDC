@@ -196,15 +196,16 @@ def train():
     #trainedData.extend([10, 1, 3, 8, 28])
     # this is for dataset 2
     numCaches = 142
-    trainedData = []
+    trainedData = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 53]
 
     caches = range(numCaches)
     caches = [c+1 for c in caches]
     random.shuffle(caches)
     for i in trainedData:
         caches.remove(i)
-    masterXCaches = caches[0:2]
-    print caches[0:2]
+    masterXCaches = caches[0:1]
+    #masterXCaches = [53]
+    print caches[0:1]
     masterX = loadDataFromCaches(masterXCaches, rows, cols)
     masterOFX = loadOpticalFlowImgs(masterXCaches, rows, cols)
     masterY = load_gt()
@@ -226,7 +227,7 @@ def train():
     testSize = 0.1
     print testSize
 
-    referenceX = range(1000)
+    referenceX = range(len(masterXCaches)*500)
     refTrainX, refTestX, trainY, testY = train_test_split(referenceX, newY, test_size=testSize, random_state=randomState)
     trainX = np.ndarray((0, 224, 224, 3), dtype='float32')
     optTrainX = np.ndarray((0, 224, 224, 3), dtype='float32')
@@ -234,12 +235,12 @@ def train():
     optTestX = np.ndarray((0, 224, 224, 3), dtype='float32')
 
     for i in refTrainX:
-        trainX = np.append(trainX, masterX[i], axis=0)
-        optTrainX = np.append(optTrainX, masterOFX[i], axis=0)
+        trainX = np.append(trainX, [masterX[i]], axis=0)
+        optTrainX = np.append(optTrainX, [masterOFX[i]], axis=0)
         #trainY = np.append(trainY, newY[i], axis=0)
     for i in refTestX:
-        testX = np.append(testX, masterX[i], axis=0)
-        optTestX = np.append(optTestX, masterOFX[i], axis=0)
+        testX = np.append(testX, [masterX[i]], axis=0)
+        optTestX = np.append(optTestX, [masterOFX[i]], axis=0)
         #testY = np.append(testY, newY[i], axis=0)
 
     trainY = trainY.reshape((trainY.shape[0], 1))
@@ -249,13 +250,12 @@ def train():
     print testX.shape
     print testY.shape
 
-    myNet = network(rows, cols)
+    myNet = double_network(rows, cols)
     # Training
     model = tflearn.DNN(myNet, checkpoint_path='./model_resnet',
                         max_checkpoints=10, tensorboard_verbose=3, tensorboard_dir='./tflearn_logs')
     model.load('./model_resnet/model1')
-    model.fit([trainX, optTrainX], trainY, n_epoch=10, validation_set=([testX, optTestX], testY),
-              show_metric=True, batch_size=32, run_id='resnet')
+    model.fit([trainX, optTrainX], trainY, n_epoch=10, validation_set=([testX, optTestX], testY), show_metric=True, batch_size=32, run_id='resnet')
     model.save('./model_resnet/model1')
 
 def evaluate(cacheN):
@@ -267,6 +267,7 @@ def evaluate(cacheN):
     random.shuffle(caches)
     masterXCaches = [cacheN]
     masterX = loadDataFromCaches(masterXCaches, rows, cols)
+    masterOFX = loadOpticalFlowImgs(masterXCaches, rows, cols)
     masterY = load_gt()
     newY = []
     for i in range(len(masterXCaches)):
@@ -282,14 +283,14 @@ def evaluate(cacheN):
 
     newY = newY.reshape((newY.shape[0], 1))
     
-    myNet = network(rows, cols)
+    myNet = double_network(rows, cols)
     model = tflearn.DNN(myNet)
     model.load('./model_resnet/model1')
     #print model.evaluate(masterX, newY, 16)
 
     predictedY = []
     for i in range(masterX.shape[0]/10):
-        predictY = model.predict(masterX[i*10 : (i+1)*10])
+        predictY = model.predict([masterX[i*10 : (i+1)*10], masterOFX[i*10 : (i+1)*10]])
         predictedY.extend(predictY)
     predictedY = np.array(predictedY)
     predictedY = predictedY.reshape((predictedY.shape[0], 1))
@@ -302,20 +303,21 @@ def evaluate(cacheN):
             denomY.extend(newY[i])
     denomY = np.array(denomY)
     denomY = denomY.reshape((newY.shape[0], 1))
-    diffY = (predictedY - newY) / denomY
+    diffY = (predictedY - newY) # / denomY
     diffYSqr = diffY ** 2
 
     if not os.path.isdir('./predictions'):
         os.mkdir('./predictions')
     predictionFile = open('./predictions/' + str(cacheN) + '.csv', 'w+')
     for i in range(predictedY.shape[0]):
-        predictionFile.write(str(predictedY[i][0]) + ',' + str(newY[i]) + ',' + str(diffY[i]) + '\n')
+        predictionFile.write(str(predictedY[i][0]) + ',' + str(newY[i][0]) + ',' + str(diffY[i][0]) + '\n')
     predictionFile.close()
 
     elemSum = np.sum(diffYSqr, axis=0)
     average = elemSum / diffY.shape[0]
     rmsd = np.sqrt(average)
-    print rmsd
+    rmsd_degrees = rmsd * 180.0 / np.pi
+    print ('rmsd_radians:{}, rmsd_degrees:{}'.format(rmsd, rmsd_degrees))
 
 
 def display(cacheN):
