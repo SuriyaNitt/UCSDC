@@ -172,8 +172,13 @@ def double_network(rows, cols):
     net2 = tflearn.global_avg_pool(net2)
 
     # Merge layers
-    net = tflearn.merge([net1, net2], mode='elemwise_mul')
+    net = tflearn.merge([net1, net2], mode='concat')
     
+    # Add LSTM layers
+    net = tflearn.reshape(net, new_shape=[1, 32, 256])
+    net = tflearn.lstm(net, 128, return_seq=True)
+    net = tflearn.lstm(net, 128)
+
     # Regression
     net = tflearn.fully_connected(net, 512, activation='prelu')
     net = tflearn.fully_connected(net, 1, activation='prelu')
@@ -196,7 +201,7 @@ def train():
     #trainedData.extend([10, 1, 3, 8, 28])
     # this is for dataset 2
     numCaches = 142
-    trainedData = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 53]
+    trainedData = []#[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 53, 46, 60]
 
     caches = range(numCaches)
     caches = [c+1 for c in caches]
@@ -204,7 +209,7 @@ def train():
     for i in trainedData:
         caches.remove(i)
     masterXCaches = caches[0:1]
-    #masterXCaches = [53]
+    masterXCaches = [44]
     print caches[0:1]
     masterX = loadDataFromCaches(masterXCaches, rows, cols)
     masterOFX = loadOpticalFlowImgs(masterXCaches, rows, cols)
@@ -227,6 +232,7 @@ def train():
     testSize = 0.1
     print testSize
 
+    '''
     referenceX = range(len(masterXCaches)*500)
     refTrainX, refTestX, trainY, testY = train_test_split(referenceX, newY, test_size=testSize, random_state=randomState)
     trainX = np.ndarray((0, 224, 224, 3), dtype='float32')
@@ -242,6 +248,15 @@ def train():
         testX = np.append(testX, [masterX[i]], axis=0)
         optTestX = np.append(optTestX, [masterOFX[i]], axis=0)
         #testY = np.append(testY, newY[i], axis=0)
+    '''
+
+    trainX = masterX[:448]
+    optTrainX = masterOFX[:448]
+    testX = masterX[-64:]
+    optTestX = masterOFX[-64:]
+
+    trainY = newY[:448]
+    testY = newY[-64:]
 
     trainY = trainY.reshape((trainY.shape[0], 1))
     testY = testY.reshape((testY.shape[0], 1))
@@ -254,8 +269,8 @@ def train():
     # Training
     model = tflearn.DNN(myNet, checkpoint_path='./model_resnet',
                         max_checkpoints=10, tensorboard_verbose=3, tensorboard_dir='./tflearn_logs')
-    model.load('./model_resnet/model1')
-    model.fit([trainX, optTrainX], trainY, n_epoch=10, validation_set=([testX, optTestX], testY), show_metric=True, batch_size=32, run_id='resnet')
+    #model.load('./model_resnet/model1')
+    model.fit([trainX, optTrainX], trainY, n_epoch=6, validation_set=([testX, optTestX], testY), show_metric=True, batch_size=32, run_id='resnet')
     model.save('./model_resnet/model1')
 
 def evaluate(cacheN):
@@ -289,10 +304,18 @@ def evaluate(cacheN):
     #print model.evaluate(masterX, newY, 16)
 
     predictedY = []
-    for i in range(masterX.shape[0]/10):
-        predictY = model.predict([masterX[i*10 : (i+1)*10], masterOFX[i*10 : (i+1)*10]])
-        predictedY.extend(predictY)
+    progressBar = tqdm(total=468)
+    for i in range(masterX.shape[0] - 31):
+        #predictY = model.predict([masterX[i*32 : (i+1)*32], masterOFX[i*32 : (i+1)*32]])
+        predictY = model.predict([masterX[i : i+32], masterOFX[i : i+32]])
+        predictedY.extend(predictY[0])
+        progressBar.update()
+    for i in range(31):
+        predictedY.extend([0.0])
+    progressBar.close()
     predictedY = np.array(predictedY)
+    print predictedY.shape
+    print predictedY
     predictedY = predictedY.reshape((predictedY.shape[0], 1))
     #diffY = predictedY - newY
     denomY = []
@@ -303,8 +326,10 @@ def evaluate(cacheN):
             denomY.extend(newY[i])
     denomY = np.array(denomY)
     denomY = denomY.reshape((newY.shape[0], 1))
-    diffY = (predictedY - newY) # / denomY
-    diffYSqr = diffY ** 2
+    print predictedY.shape
+    print newY.shape
+    diffY = np.subtract(predictedY, newY)
+    diffYSqr = np.square(diffY)
 
     if not os.path.isdir('./predictions'):
         os.mkdir('./predictions')
