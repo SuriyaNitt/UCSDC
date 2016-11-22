@@ -201,7 +201,7 @@ def train():
     #trainedData.extend([10, 1, 3, 8, 28])
     # this is for dataset 2
     numCaches = 142
-    trainedData = []#[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 53, 46, 60]
+    trainedData = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 44, 49]
 
     caches = range(numCaches)
     caches = [c+1 for c in caches]
@@ -209,7 +209,7 @@ def train():
     for i in trainedData:
         caches.remove(i)
     masterXCaches = caches[0:1]
-    masterXCaches = [44]
+    masterXCaches = [53]
     print caches[0:1]
     masterX = loadDataFromCaches(masterXCaches, rows, cols)
     masterOFX = loadOpticalFlowImgs(masterXCaches, rows, cols)
@@ -248,7 +248,7 @@ def train():
         testX = np.append(testX, [masterX[i]], axis=0)
         optTestX = np.append(optTestX, [masterOFX[i]], axis=0)
         #testY = np.append(testY, newY[i], axis=0)
-    '''
+    
 
     trainX = masterX[:448]
     optTrainX = masterOFX[:448]
@@ -257,6 +257,33 @@ def train():
 
     trainY = newY[:448]
     testY = newY[-64:]
+    '''
+ 
+    trainX = np.ndarray((0, 224, 224, 3), dtype='float32')
+    optTrainX = np.ndarray((0, 224, 224, 3), dtype='float32')
+    testX = np.ndarray((0, 224, 224, 3), dtype='float32')
+    optTestX = np.ndarray((0, 224, 224, 3), dtype='float32')
+
+    trainY = []
+    testY = []
+    offset = 64
+
+    #trainX = np.append(trainX, np.zeros)
+    for i in range(32):
+        trainX = np.append(trainX, masterX[i+offset : i+offset+32], axis=0)
+        optTrainX = np.append(optTrainX, masterOFX[i+offset : i+offset+32], axis=0)
+        for j in range(32):
+            trainY.extend([newY[i+offset+31]])#newY[31:63]
+    
+    for i in range(16):
+        testX = np.append(testX, masterX[416+i : 416+i+32], axis=0)
+        optTestX = np.append(optTestX, masterOFX[416+i : 416+i+32], axis=0)
+        for j in range(32):
+            testY.extend([newY[i+448]])#newY[448:464]
+
+
+    trainY = np.array(trainY)
+    testY = np.array(testY)
 
     trainY = trainY.reshape((trainY.shape[0], 1))
     testY = testY.reshape((testY.shape[0], 1))
